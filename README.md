@@ -6,3 +6,6 @@ I’ve noticed there is a common misconception that LSA Protection prevents atta
 The driver file can be downlaoded here:
 http://download-eu2.guru3d.com/afterburner/[Guru3D.com]-MSIAfterburnerSetup462Beta2.zip
 You just need to extract RTCore64.sys from the installer using something like 7zip and place into in the same folder as the PPLKiller executable.
+
+# Usage and Demo
+[![Bypassing LSA Protection](http://img.youtube.com/vi/w2_KqnhgN94/0.jpg)](http://www.youtube.com/watch?v=w2_KqnhgN94 "Bypassing LSA Protection")
