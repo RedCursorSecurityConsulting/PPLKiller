@@ -1,5 +1,5 @@
 # PPLKiller
-Tool is bypass LSA Protection (aka Protected Process Light)
+Tool to bypass LSA Protection (aka Protected Process Light)
 
 I’ve noticed there is a common misconception that LSA Protection prevents attacks that leverage SeDebug or Administrative privileges to extract credential material from memory, like Mimikatz. LSA Protection does NOT protect from these attacks, at best it makes them slightly more difficult as an extra step needs to be performed.
 
