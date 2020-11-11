@@ -391,6 +391,8 @@ struct Offsets getVersionOffsets() {
     wprintf(L"[+] Windows Version %s Found\n", value);
     auto winVer = _wtoi(value);
     switch (winVer) {
+    case 1607:
+        return Offsets{ 0x02e8, 0x02f0, 0x0358, 0x06c8 };
     case 1903:
     case 1909:
         return Offsets{ 0x02e8, 0x02f0, 0x0360, 0x06f8 };
