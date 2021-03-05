@@ -8,7 +8,7 @@ I’ve noticed there is a common misconception that LSA Protection prevents atta
 2. Place the RTCore64.sys (see below) into the same folder as the PPLKiller.exe executable. 
 
 # Getting the Driver
-Download it (HERE)[https://mega.nz/file/BOwWEQjR#7bJqbrL_v-Wzy1ZaL_V4pR_sBDQQyuMddfoMF_ypbDU]
+Download it [HERE](https://mega.nz/file/BOwWEQjR#7bJqbrL_v-Wzy1ZaL_V4pR_sBDQQyuMddfoMF_ypbDU)
 OR
 1. Install 7-Zip if you dont already have it
 2. Download and extract MSIAfterburnerSetup462Beta2.exe from http://download-eu2.guru3d.com/afterburner/[Guru3D.com]-MSIAfterburnerSetup462Beta2.zip
