@@ -7,10 +7,11 @@ I’ve noticed there is a common misconception that LSA Protection prevents atta
 1. Open PPLKiller.sln with Visual Studio 2019 and build a Release binary which will be saved in PPLKiller\x64\Release\PPLKiller.exe
 2. You'll always want to run `PPLKiller.exe /installDriver` first to install the driver
 3. Run an attack like `PPLKiller.exe /disableLSAProtection` 
-4. CLeanup with `PPLKiller.exe /uninstallDriver`
+4. Cleanup with `PPLKiller.exe /uninstallDriver`
 
-# Vidoe Usage
+# Video Usage
 [![Bypassing LSA Protection](http://img.youtube.com/vi/w2_KqnhgN94/0.jpg)](http://www.youtube.com/watch?v=w2_KqnhgN94 "Bypassing LSA Protection")
 
-# Other
-I highly recommend checking https://github.com/itm4n/PPLdump. PPLdump can also disable LSA Protection without loading a driver which is probably stealther.
+# Mitigations
+- Use Credential Guard which uses virtualization-based security. This would prevent PPLKiller and PPLdump.
+- Use a Microsoft Defender Application Control kernel-mode code integrity policy to restrict which drivers can be loaded. The tool [PPLdump](https://github.com/itm4n/PPLdump), which can disable LSA Protection without loading a driver, could still be used.
