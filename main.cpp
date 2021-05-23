@@ -14,6 +14,9 @@
 
 #include "resource.h"
 
+#define AUTHOR L"@aceb0nd"
+#define VERSION L"0.2"
+
 #if !defined(PRINT_ERROR_AUTO)
 #define PRINT_ERROR_AUTO(func) (wprintf(L"ERROR " TEXT(__FUNCTION__) L" ; " func L" (0x%08x)\n", GetLastError()))
 #endif
@@ -540,6 +543,9 @@ WCHAR* dropDriver() {
 
 
 int wmain(int argc, wchar_t* argv[]) {
+
+    wprintf(L"PPLKiller version %ws by %ws\n", VERSION, AUTHOR);
+
     if (argc < 2) {
         wprintf(L"Usage: %s\n"
             " [/disablePPL <PID>]\n"
