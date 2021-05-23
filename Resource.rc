@@ -1,0 +1,4 @@
+#include "resource.h"
+#include "winres.h"
+
+IDR_RT_RCDATA1          RCDATA                  "driver\\RTCore64.sys"

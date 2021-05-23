@@ -8,6 +8,12 @@
 #include <Psapi.h>
 #include <cstdio>
 
+#include <Shlobj.h>
+#include <Shlobj_core.h>
+#include <string_view>
+
+#include "resource.h"
+
 #if !defined(PRINT_ERROR_AUTO)
 #define PRINT_ERROR_AUTO(func) (wprintf(L"ERROR " TEXT(__FUNCTION__) L" ; " func L" (0x%08x)\n", GetLastError()))
 #endif
@@ -416,8 +422,124 @@ struct Offsets getVersionOffsets() {
 
 }
 
+int fileExists(TCHAR* file)
+{
+    WIN32_FIND_DATA FindFileData;
+    HANDLE handle = FindFirstFile(file, &FindFileData);
+    int found = handle != INVALID_HANDLE_VALUE;
+    if (found)
+    {
+        //FindClose(&handle); this will crash
+        FindClose(handle);
+    }
+    return found;
+}
+
+WCHAR* GetUserLocalTempPath() {
+    //static constexpr std::wstring_view temp_label = L"\\Temp\\";
+    HWND folder_handle = { 0 };
+    WCHAR *temp_path = (WCHAR*)malloc(sizeof(WCHAR) * MAX_PATH);
+    if (temp_path == NULL) {
+        return NULL;
+    }
+    auto get_folder = SHGetFolderPath(folder_handle, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_DEFAULT, temp_path);
+    if (get_folder == S_OK) {
+        // const wchar_t driverName[] = L"\\RTCore64.sys";
+        wcscat_s(temp_path, MAX_PATH, L"\\Temp\\RTCore64.sys");
+        //input_parameter = static_cast<const wchar_t*>(temp_path);
+        //input_parameter.append(temp_label);
+        CloseHandle(folder_handle);
+        return temp_path;
+    }
+    return NULL;
+}
+
+BOOL GetResourcePointer(HINSTANCE Instance, LPCTSTR ResName, LPCTSTR ResType, LPVOID* ppRes, DWORD* pdwResSize) {
+    // Check the pointers to which we want to write
+    if (ppRes && pdwResSize) {
+        HRSRC hRsrc;
+        // Find the resource ResName of type ResType in the DLL/EXE described by Instance
+        if (hRsrc = FindResource((HMODULE)Instance, ResName, ResType)) {
+            HGLOBAL hGlob;
+            // Make sure it's in memory ...
+            if (hGlob = LoadResource(Instance, hRsrc)) {
+                // Now lock it to get a pointer
+                *ppRes = LockResource(hGlob);
+                // Also retrieve the size of the resource
+                *pdwResSize = SizeofResource(Instance, hRsrc);
+                // Return TRUE only if both succeeded
+                return (*ppRes && *pdwResSize);
+            }
+        }
+    }
+    // Failure means don't use the values in *ppRes and *pdwResSize
+    return FALSE;
+}
+
+WCHAR* dropDriver() {
+    //get driver
+    LPVOID RTCoreDriver;
+    DWORD driverSize;
+    if (GetResourcePointer(NULL, MAKEINTRESOURCE(IDR_RT_RCDATA1), RT_RCDATA, &RTCoreDriver, &driverSize) == FALSE) {
+        wprintf(L"GetResourcePointer failed\n");
+        return FALSE;
+    }
+
+    auto tempPath = GetUserLocalTempPath();
+    if (fileExists(tempPath)) {
+        return tempPath;
+    }
+
+    HANDLE hFile = CreateFile(tempPath,                // name of the write
+        GENERIC_WRITE,          // open for writing
+        0,                      // do not share
+        NULL,                   // default security
+        CREATE_NEW,             // create new file only
+        FILE_ATTRIBUTE_NORMAL,  // normal file
+        NULL);                  // no attr. template
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+
+        wprintf(L"Unable to open file \"%s\" for write.\n", tempPath);
+        return NULL;
+    }
+
+    BOOL bErrorFlag = FALSE;
+    DWORD dwBytesWritten = 0;
+
+    bErrorFlag = WriteFile(
+        hFile,           // open file handle
+        RTCoreDriver,      // start of data to write
+        driverSize,  // number of bytes to write
+        &dwBytesWritten, // number of bytes that were written
+        NULL);            // no overlapped structure
+
+    if (FALSE == bErrorFlag)
+    {
+        wprintf(L"Terminal failure: Unable to write to file.\n");
+    }
+    else
+    {
+        if (dwBytesWritten != driverSize)
+        {
+            // This is an error because a synchronous write that results in
+            // success (WriteFile returns TRUE) should write all data as
+            // requested. This would not necessarily be the case for
+            // asynchronous writes.
+            wprintf(L"Error: dwBytesWritten != dwBytesToWrite\n");
+        }
+        else
+        {
+            wprintf(L"Wrote %d bytes to %s successfully.\n", dwBytesWritten, tempPath);
+        }
+    }
+    CloseHandle(hFile);
+    return tempPath;
+    
+}
+
+
 int wmain(int argc, wchar_t* argv[]) {
-    getKernelBaseAddr();
     if (argc < 2) {
         wprintf(L"Usage: %s\n"
             " [/disablePPL <PID>]\n"
@@ -430,13 +552,6 @@ int wmain(int argc, wchar_t* argv[]) {
     }
 
     const auto svcName = L"RTCore64";
-    const auto svcDesc = L"Micro-Star MSI Afterburner";
-    const wchar_t driverName[] = L"\\RTCore64.sys";
-    const auto pathSize = MAX_PATH + sizeof(driverName) / sizeof(wchar_t);
-    TCHAR driverPath[pathSize];
-    GetCurrentDirectory(pathSize, driverPath);
-    wcsncat_s(driverPath, driverName, sizeof(driverName) / sizeof(wchar_t));
-
 
     if (wcscmp(argv[1] + 1, L"disablePPL") == 0 && argc == 3) {
         Offsets offsets = getVersionOffsets();
@@ -459,17 +574,22 @@ int wmain(int argc, wchar_t* argv[]) {
         spawnCmd();
     }
     else if (wcscmp(argv[1] + 1, L"installDriver") == 0) {
+        WCHAR* driverPath = dropDriver();
+        const auto svcDesc = L"Micro-Star MSI Afterburner";
         if (auto status = service_install(svcName, svcDesc, driverPath, SERVICE_KERNEL_DRIVER, SERVICE_AUTO_START, TRUE) == 0x00000005) {
             wprintf(L"[!] 0x00000005 - Access Denied - Did you run as administrator?\n");
         }
     }
     else if (wcscmp(argv[1] + 1, L"uninstallDriver") == 0) {
         service_uninstall(svcName);
+        auto tempPath = GetUserLocalTempPath();
+        if (DeleteFile(tempPath) != 0) {
+            wprintf(L"Deleted %s\n", tempPath);
+        }
     }
     else {
         wprintf(L"Error: Check the help\n");
     }
-
 
     return 0;
 }
