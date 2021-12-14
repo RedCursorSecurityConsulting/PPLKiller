@@ -3,6 +3,8 @@ Tool to bypass LSA Protection (aka Protected Process Light)
 
 I’ve noticed there is a common misconception that LSA Protection prevents attacks that leverage SeDebug or Administrative privileges to extract credential material from memory, like Mimikatz. LSA Protection does NOT protect from these attacks, at best it makes them slightly more difficult as an extra step needs to be performed.
 
+This https://github.com/wavestone-cdt/EDRSandblast does the same thing and is probably better. This https://github.com/itm4n/PPLdump does the same thing without using a driver.
+
 # Usage and Demo
 1. Open PPLKiller.sln with Visual Studio 2019 and build a Release binary which will be saved in PPLKiller\x64\Release\PPLKiller.exe
 2. You'll always want to run `PPLKiller.exe /installDriver` first to install the driver
